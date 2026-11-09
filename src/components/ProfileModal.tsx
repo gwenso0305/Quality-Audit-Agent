@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile, RoleCategory } from '../types';
 import { UserCheck, X, AlertCircle } from 'lucide-react';
 
@@ -28,6 +28,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [yearsInRole, setYearsInRole] = useState<number>(initialProfile?.yearsInRole ?? 2);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Synchronize form state with initialProfile whenever the modal opens or initialProfile updates
+  useEffect(() => {
+    if (isOpen) {
+      setDepartment(initialProfile?.department || 'Department of Computing Education');
+      setRoleCategory(initialProfile?.roleCategory || 'Faculty');
+      setPosition(initialProfile?.position || '');
+      setJobFunction(initialProfile?.jobFunction || '');
+      setYearsInRole(initialProfile?.yearsInRole ?? 2);
+      setError('');
+      setSaving(false);
+    }
+  }, [isOpen, initialProfile]);
 
   if (!isOpen) return null;
 
@@ -134,8 +147,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 min={0}
                 max={50}
                 required
-                value={yearsInRole}
-                onChange={(e) => setYearsInRole(parseInt(e.target.value, 10))}
+                value={isNaN(yearsInRole) ? '' : yearsInRole}
+                onChange={(e) => setYearsInRole(e.target.value === '' ? NaN : parseInt(e.target.value, 10))}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7A1F2B]"
               />
             </div>
