@@ -1,0 +1,6 @@
+{
+  "name": "Quality Audit Agent",
+  "description": "Total Quality Management (TQM) process audit platform for the Department of Computing Education (DCE), University of Mindanao - Visayan Campus.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

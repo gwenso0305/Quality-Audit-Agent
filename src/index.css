@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Merriweather", Georgia, Cambria, serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --color-maroon: #7A1F2B;
+  --color-gold: #C9A227;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #FDFBF7;
+  color: #1E293B;
+}
+
+h1, h2, h3, h4, .font-serif {
+  font-family: var(--font-serif);
+}

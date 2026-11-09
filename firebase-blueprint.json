@@ -1,0 +1,269 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information for Department of Computing Education personnel. Excludes private emails.",
+      "type": "object",
+      "properties": {
+        "department": {
+          "type": "string",
+          "description": "Department name, e.g. Department of Computing Education",
+          "maxLength": 128
+        },
+        "roleCategory": {
+          "type": "string",
+          "enum": ["Faculty", "Program Head", "Administrative Staff"],
+          "description": "Primary role category in the department"
+        },
+        "position": {
+          "type": "string",
+          "description": "Designation or title, e.g. Assistant Professor",
+          "maxLength": 100
+        },
+        "jobFunction": {
+          "type": "string",
+          "description": "Primary duties and responsibilities",
+          "maxLength": 500
+        },
+        "yearsInRole": {
+          "type": "number",
+          "description": "Years of service in this role (0-50)"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name from Google OAuth",
+          "maxLength": 100
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User photo URL from Google OAuth",
+          "maxLength": 500
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["department", "roleCategory", "position", "jobFunction", "yearsInRole"]
+    },
+    "Session": {
+      "title": "AuditSession",
+      "description": "An audit interview session conducted by the Audit Agent.",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "status": {
+          "type": "string",
+          "enum": ["in_progress", "completed"]
+        },
+        "part": {
+          "type": "number",
+          "description": "Interview part (1 to 4)"
+        },
+        "profileSnapshot": {
+          "type": "object",
+          "description": "Snapshot of user profile at session start"
+        },
+        "auditCard": {
+          "type": "object",
+          "description": "Structured Audit Card generated at session completion"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["sessionId", "userId", "status", "part", "createdAt"]
+    },
+    "Interaction": {
+      "title": "AuditInteraction",
+      "description": "Individual interview turns between user and Audit Agent.",
+      "type": "object",
+      "properties": {
+        "interactionId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "sessionId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "assistant"]
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 5000
+        },
+        "modelUsed": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "clientMessageId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["sessionId", "role", "content", "userId"]
+    },
+    "Baseline": {
+      "title": "BaselineSettings",
+      "description": "Quality baseline documents uploaded by the administrator.",
+      "type": "object",
+      "properties": {
+        "documents": {
+          "type": "array",
+          "description": "List of {id, title, text, sizeChars, uploadedAt}"
+        },
+        "totalChars": {
+          "type": "number"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["documents"]
+    },
+    "ImprovementAction": {
+      "title": "ImprovementAction",
+      "description": "PDCA improvement board action item.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "owner": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "targetDate": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "standardCode": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "column": {
+          "type": "string",
+          "enum": ["Plan", "Do", "Check", "Act"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["title", "owner", "column"]
+    },
+    "AuditReport": {
+      "title": "AuditReport",
+      "description": "Consolidated quality audit report written by Gemini.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "markdown": {
+          "type": "string"
+        },
+        "stats": {
+          "type": "object"
+        },
+        "modelUsed": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["title", "markdown", "createdAt"]
+    },
+    "Admin": {
+      "title": "AdminRole",
+      "description": "Administrator role marker in Firestore.",
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": ["superadmin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["role"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document owned by the user."
+    },
+    "/users/{userId}/sessions/{sessionId}": {
+      "schema": "Session",
+      "description": "Audit interview session documents."
+    },
+    "/users/{userId}/interactions/{interactionId}": {
+      "schema": "Interaction",
+      "description": "Audit interview messages and turns."
+    },
+    "/settings/baseline": {
+      "schema": "Baseline",
+      "description": "Single document containing all uploaded quality standards baseline."
+    },
+    "/improvementActions/{actionId}": {
+      "schema": "ImprovementAction",
+      "description": "Admin PDCA improvement board actions."
+    },
+    "/auditReports/{reportId}": {
+      "schema": "AuditReport",
+      "description": "Admin consolidated quality audit reports."
+    },
+    "/admins/{uid}": {
+      "schema": "Admin",
+      "description": "Super admin role verification document."
+    }
+  }
+}

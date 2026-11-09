@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Role check collection: users can only check their own admin doc; never write from app
+    match /admins/{uid} {
+      allow get: if isSignedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    // Baseline settings: read by any authenticated user; modified only by superadmin
+    match /settings/baseline {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // User profile: owner read/write; admin read-only
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId);
+
+      // Sessions subcollection: owner read/write; admin read-only
+      match /sessions/{sessionId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if isOwner(userId);
+      }
+
+      // Interactions subcollection: owner read/write; admin read-only
+      match /interactions/{interactionId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if isOwner(userId);
+      }
+    }
+
+    // Collection group queries for admin reporting & aggregation
+    match /{path=**}/sessions/{sessionId} {
+      allow read: if isAdmin();
+    }
+
+    match /{path=**}/interactions/{interactionId} {
+      allow read: if isAdmin();
+    }
+
+    // PDCA Improvement actions: admin only
+    match /improvementActions/{actionId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Consolidated audit reports: admin only
+    match /auditReports/{reportId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Global default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
