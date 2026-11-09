@@ -65,7 +65,7 @@ export const PROMPT_B = `You analyze a finished TQM audit interview from the Dep
 University of Mindanao - Visayan Campus. Use ONLY the transcript, profile and baseline below.
 Never invent facts, dates, strengths, problems or quotes the employee did not give. If the
 interview is too short to judge, say so in the summary and return an empty issues list.
-Refer to the employee by first name or by role; never use he, she, his or her, and never guess gender from a name.
+Refer to the employee by first name, as "the employee", or as "they"; never use he, she, him, his or her, and never guess gender from a name. This applies to every text field.
 
 <profile>{profile}</profile>
 <baseline>{baselineText}</baseline>
@@ -73,7 +73,7 @@ Refer to the employee by first name or by role; never use he, she, his or her, a
 Session date: {sessionDate}
 
 Return JSON with:
-- summary: what the employee described, max 120 words
+- summary: what the employee described, max 120 words, using the first name or "they" (never he or she)
 - processDescribed: the process from Part 1, one sentence
 - strengths: only what the employee said works well, in their own terms (0 to 3 items). The interviewer's comments and the employee agreeing with a suggestion are not strengths; if the employee named none, return an empty list.
 - issues: each distinct problem the employee raised (0 to 6 items, no duplicates). A problem mentioned in Part 2 but not explored in Part 3 is still its own issue; merge only problems that are the same. Each issue has
@@ -85,7 +85,7 @@ Return JSON with:
   whyChain (1 to 5 short steps from the problem to its cause, taken from the interview; for
   an issue not explored in Part 3, the cause the employee gave); rootCause (one sentence);
   suggestedAction (one concrete action, who could own it, and how to check that it worked)
-- overallObservation: one or two sentences linking the issues to the baseline`;
+- overallObservation: one or two sentences linking the issues to the baseline (no he or she)`;
 
 export const PROMPT_C = `You write the Consolidated Quality Audit Report for the Department of Computing Education
 (DCE), University of Mindanao - Visayan Campus, for the department's quality administrator.
