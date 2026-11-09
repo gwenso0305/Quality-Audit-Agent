@@ -67,6 +67,8 @@ function sanitizePayload<T>(obj: T): T {
   );
 }
 
+type InteractionWithMeta = AuditInteraction & { hasPendingWrites?: boolean };
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -79,8 +81,8 @@ export default function App() {
   // Sessions and Chat State
   const [userSessions, setUserSessions] = useState<AuditSession[]>([]);
   const [activeSession, setActiveSession] = useState<AuditSession | null>(null);
-  const [sessionInteractions, setSessionInteractions] = useState<AuditInteraction[]>([]);
-  const [allInteractionsMap, setAllInteractionsMap] = useState<Record<string, AuditInteraction[]>>({});
+  const [sessionInteractions, setSessionInteractions] = useState<InteractionWithMeta[]>([]);
+  const [allInteractionsMap, setAllInteractionsMap] = useState<Record<string, InteractionWithMeta[]>>({});
 
   // Admin Data State
   const [adminAllSessions, setAdminAllSessions] = useState<AuditSession[]>([]);
@@ -293,10 +295,15 @@ export default function App() {
 
     const unsubInteractions = onSnapshot(
       q,
+      { includeMetadataChanges: true },
       (snap) => {
-        const list: AuditInteraction[] = [];
+        const list: InteractionWithMeta[] = [];
         snap.forEach((d) => {
-          list.push({ id: d.id, ...d.data() } as AuditInteraction);
+          list.push({
+            id: d.id,
+            ...d.data(),
+            hasPendingWrites: d.metadata.hasPendingWrites,
+          } as InteractionWithMeta);
         });
         // Sort in code by timestamp
         list.sort(
@@ -393,6 +400,13 @@ export default function App() {
   }) => {
     if (!currentUser || !activeSession) throw new Error('No active session.');
 
+    // 1) Fail immediately if offline
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      throw new Error(
+        'You appear to be offline. Your message was not sent; click Retry Save when you are back online.'
+      );
+    }
+
     const token = await currentUser.getIdToken();
 
     // 1. Idempotently persist user message to Firestore
@@ -407,12 +421,31 @@ export default function App() {
       timestamp: new Date().toISOString(),
     };
 
-    await setDoc(
-      doc(db, 'users', currentUser.uid, 'interactions', clientMessageId),
-      sanitizePayload(userInteraction)
-    );
+    // 2) Race user-message setDoc against a 15-second timeout
+    let timeoutId: any;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(
+          new Error(
+            'Unable to confirm save with the server within 15 seconds. Please check your connection and click Retry Save.'
+          )
+        );
+      }, 15000);
+    });
 
-    // 2. Call server /api/chat
+    try {
+      await Promise.race([
+        setDoc(
+          doc(db, 'users', currentUser.uid, 'interactions', clientMessageId),
+          sanitizePayload(userInteraction)
+        ),
+        timeoutPromise,
+      ]);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    // 2. Call server /api/chat (only reachable if write was confirmed within 15s)
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: {

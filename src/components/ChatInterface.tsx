@@ -17,7 +17,7 @@ import {
 interface ChatInterfaceProps {
   session: AuditSession;
   profile: UserProfile;
-  interactions: AuditInteraction[];
+  interactions: (AuditInteraction & { hasPendingWrites?: boolean })[];
   onSendMessage: (params: {
     message: string;
     clientMessageId: string;
@@ -248,31 +248,41 @@ To start, could you walk me through one task you do regularly, step by step?`;
                   {isUser ? <User className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
                 </div>
 
-                <div
-                  className={`max-w-[85%] p-4 text-xs shadow-2xs rounded-2xl ${
-                    isUser
-                      ? 'bg-[#7A1F2B] text-[#FDFBF7] rounded-tr-xs'
-                      : 'bg-[#FAF7F2] border border-[#E7DECD] text-slate-800 rounded-tl-xs'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span
-                      className={`font-semibold text-[11px] ${
-                        isUser ? 'text-amber-200' : 'text-[#7A1F2B] font-serif font-bold'
-                      }`}
-                    >
-                      {isUser ? profile.displayName || 'You' : 'Audit Agent'}
-                    </span>
-                    {msg.modelUsed && (
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {msg.modelUsed}
+                <div className={`max-w-[85%] flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+                  <div
+                    className={`p-4 text-xs shadow-2xs rounded-2xl w-full ${
+                      isUser
+                        ? 'bg-[#7A1F2B] text-[#FDFBF7] rounded-tr-xs'
+                        : 'bg-[#FAF7F2] border border-[#E7DECD] text-slate-800 rounded-tl-xs'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span
+                        className={`font-semibold text-[11px] ${
+                          isUser ? 'text-amber-200' : 'text-[#7A1F2B] font-serif font-bold'
+                        }`}
+                      >
+                        {isUser ? profile.displayName || 'You' : 'Audit Agent'}
                       </span>
-                    )}
+                      {msg.modelUsed && (
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {msg.modelUsed}
+                        </span>
+                      )}
+                    </div>
+                    <SafeMarkdown
+                      content={msg.content}
+                      className={isUser ? 'text-[#FDFBF7] prose-invert' : 'text-slate-800'}
+                    />
                   </div>
-                  <SafeMarkdown
-                    content={msg.content}
-                    className={isUser ? 'text-[#FDFBF7] prose-invert' : 'text-slate-800'}
-                  />
+
+                  {/* While a user message is only in the local cache, show a small "Not saved yet" label */}
+                  {isUser && msg.hasPendingWrites && (
+                    <span className="text-[10px] text-amber-700 font-medium mt-1 mr-1 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      Not saved yet
+                    </span>
+                  )}
                 </div>
               </div>
             );
