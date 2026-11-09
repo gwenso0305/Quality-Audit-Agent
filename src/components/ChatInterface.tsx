@@ -51,6 +51,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzingSeconds, setAnalyzingSeconds] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const lastSentCopyRef = useRef<string>('');
 
   // Auto-scroll to bottom of conversation
   useEffect(() => {
@@ -70,11 +71,16 @@ To start, could you walk me through one task you do regularly, step by step?`;
   // Start sending message
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!inputText.trim() || sending || session.status === 'completed') return;
+    const textToSend = (inputText.trim() || lastSentCopyRef.current).trim();
+    if (!textToSend || sending || session.status === 'completed') return;
 
     // Generate or reuse clientMessageId for idempotency
     const clientMsgId = activeClientMessageId || crypto.randomUUID();
     setActiveClientMessageId(clientMsgId);
+    lastSentCopyRef.current = textToSend;
+
+    // Clear input box immediately as soon as Send is pressed
+    setInputText('');
     setSending(true);
     setSecondsElapsed(0);
     setErrorMessage('');
@@ -84,20 +90,21 @@ To start, could you walk me through one task you do regularly, step by step?`;
       setSecondsElapsed((prev) => prev + 1);
     }, 1000);
 
-    const messageText = inputText.trim();
-
     try {
       await onSendMessage({
-        message: messageText,
+        message: textToSend,
         clientMessageId: clientMsgId,
         part: session.part || 1,
       });
 
-      // Clear input ONLY after confirmed save & server reply
-      setInputText('');
+      // Clear pending message tracking on success
+      lastSentCopyRef.current = '';
       setActiveClientMessageId('');
     } catch (err: any) {
       console.error('Failed to send interview message:', err);
+      // Restore the text in the input box on failure
+      setInputText(lastSentCopyRef.current);
+
       const isBusy =
         err.status === 502 ||
         err.status === 504 ||
@@ -111,7 +118,7 @@ To start, could you walk me through one task you do regularly, step by step?`;
           : err.message || 'Failed to send message.'
       );
       setShowRetryToast(true);
-      // NOTE: input buffer is deliberately NOT cleared so user doesn't lose text
+      // Note: activeClientMessageId is kept so retry reuses it idempotently
     } finally {
       clearInterval(timer);
       setSending(false);
@@ -136,11 +143,12 @@ To start, could you walk me through one task you do regularly, step by step?`;
   };
 
   const currentPart = session.part || 1;
+  const isCompleted = session.status === 'completed';
 
   return (
-    <div className="space-y-4">
+    <div className={isCompleted ? "space-y-4" : "space-y-4 md:flex md:flex-col md:h-[calc(100vh-4.5rem)]"}>
       {/* 4-Part Progress Indicator */}
-      <div className="bg-white border border-[#E7DECD] rounded-xl p-4 shadow-xs">
+      <div className="bg-white border border-[#E7DECD] rounded-xl p-4 shadow-xs shrink-0">
         <div className="flex items-center justify-between gap-1 overflow-x-auto pb-1">
           {PARTS.map((p, idx) => {
             const isCompleted = currentPart > p.num;
@@ -199,8 +207,14 @@ To start, could you walk me through one task you do regularly, step by step?`;
       )}
 
       {/* Chat Messages Log */}
-      <div className="bg-white border border-[#E7DECD] rounded-xl p-5 shadow-xs flex flex-col min-h-[480px] max-h-[620px] overflow-hidden">
-        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+      <div
+        className={`bg-white border border-[#E7DECD] rounded-xl p-5 shadow-xs flex flex-col overflow-hidden ${
+          isCompleted
+            ? 'min-h-[480px] max-h-[620px]'
+            : 'min-h-[420px] md:min-h-[420px] md:flex-1'
+        }`}
+      >
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
           {/* Welcome Message (First message from app) */}
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-full bg-[#7A1F2B] text-[#C9A227] flex items-center justify-center shrink-0 shadow-2xs mt-1">
@@ -282,7 +296,7 @@ To start, could you walk me through one task you do regularly, step by step?`;
 
         {/* Retry Toast Banner if save or API failed */}
         {showRetryToast && (
-          <div className="my-2 p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs text-amber-900">
+          <div className="shrink-0 my-2 p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs text-amber-900">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
               <span>{errorMessage || 'Failed to save or receive response.'}</span>
@@ -298,8 +312,8 @@ To start, could you walk me through one task you do regularly, step by step?`;
         )}
 
         {/* Input area & Finish button */}
-        {session.status !== 'completed' && (
-          <div className="pt-3 border-t border-slate-200 mt-2 space-y-2">
+        {!isCompleted && (
+          <div className="shrink-0 pt-3 border-t border-slate-200 mt-2 space-y-2">
             <form onSubmit={handleSend} className="flex items-end gap-2">
               <div className="flex-1 relative">
                 <textarea
