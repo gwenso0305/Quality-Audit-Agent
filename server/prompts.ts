@@ -65,6 +65,7 @@ export const PROMPT_B = `You analyze a finished TQM audit interview from the Dep
 University of Mindanao - Visayan Campus. Use ONLY the transcript, profile and baseline below.
 Never invent facts, dates, strengths, problems or quotes the employee did not give. If the
 interview is too short to judge, say so in the summary and return an empty issues list.
+Refer to the employee by first name or by role; never use he, she, his or her, and never guess gender from a name.
 
 <profile>{profile}</profile>
 <baseline>{baselineText}</baseline>
@@ -74,8 +75,8 @@ Session date: {sessionDate}
 Return JSON with:
 - summary: what the employee described, max 120 words
 - processDescribed: the process from Part 1, one sentence
-- strengths: what works well, in the employee's own terms (0 to 3 items)
-- issues: each distinct problem the employee raised (0 to 6 items, no duplicates), each with
+- strengths: only what the employee said works well, in their own terms (0 to 3 items). The interviewer's comments and the employee agreeing with a suggestion are not strengths; if the employee named none, return an empty list.
+- issues: each distinct problem the employee raised (0 to 6 items, no duplicates). A problem mentioned in Part 2 but not explored in Part 3 is still its own issue; merge only problems that are the same. Each issue has
   title (max 12 words); category (exactly one of: Instruction & Learning Materials,
   Assessment & Grading, Laboratory & Equipment, Records & Documentation, Communication &
   Coordination, Policies & Procedures, Workload & Staffing, Student Support); impact (Low,
