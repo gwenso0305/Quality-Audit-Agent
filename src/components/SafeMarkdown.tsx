@@ -1,5 +1,14 @@
 import React, { useMemo } from 'react';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+
+// Register hook once at module level to add target="_blank" and rel="noopener noreferrer" to all remaining <a> tags
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+  if (node.tagName === 'A') {
+    node.setAttribute('target', '_blank');
+    node.setAttribute('rel', 'noopener noreferrer');
+  }
+});
 
 interface SafeMarkdownProps {
   content: string;
@@ -17,10 +26,11 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({ content, className =
 
     try {
       // marked parses markdown cleanly into formatted tags
-      return marked.parse(escaped, { async: false, breaks: true }) as string;
+      const rawHtml = marked.parse(escaped, { async: false, breaks: true }) as string;
+      return DOMPurify.sanitize(rawHtml);
     } catch (err) {
       console.warn('Markdown parsing failed:', err);
-      return `<p>${escaped}</p>`;
+      return DOMPurify.sanitize(`<p>${escaped}</p>`);
     }
   }, [content]);
 
@@ -31,3 +41,4 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({ content, className =
     />
   );
 };
+
