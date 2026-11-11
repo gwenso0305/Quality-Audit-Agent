@@ -8,6 +8,7 @@ import {
 import {
   doc,
   getDoc,
+  getDocs,
   setDoc,
   updateDoc,
   collection,
@@ -604,9 +605,52 @@ export default function App() {
   // Export all transcripts into single .md file
   const handleExportTranscripts = async () => {
     if (adminAllSessions.length === 0) {
-      alert('No audit sessions available to export.');
+      showToast('No audit sessions available to export.');
       return;
     }
+
+    const parseDate = (val: any) => {
+      if (!val) return new Date();
+      if (typeof val.toDate === 'function') return val.toDate();
+      return new Date(val);
+    };
+
+    // 2) List the sessions oldest first
+    const sortedSessions = [...adminAllSessions].sort(
+      (a, b) =>
+        parseDate(a.createdAt).getTime() - parseDate(b.createdAt).getTime()
+    );
+
+    // 1) Read messages for each session in parallel with Promise.all
+    const sessionDataList = await Promise.all(
+      sortedSessions.map(async (sess) => {
+        try {
+          const q = query(
+            collection(db, 'users', sess.userId, 'interactions'),
+            where('sessionId', '==', sess.sessionId)
+          );
+          const snap = await getDocs(q);
+          const messages: AuditInteraction[] = [];
+          snap.forEach((d) => {
+            messages.push({ id: d.id, ...(d.data() as any) });
+          });
+          // Sort messages by timestamp in code (oldest first)
+          messages.sort(
+            (a, b) =>
+              parseDate(a.timestamp).getTime() -
+              parseDate(b.timestamp).getTime()
+          );
+          return { sess, messages, error: null };
+        } catch (err: any) {
+          // 4) If one session's messages cannot be read, record error and continue with others
+          return {
+            sess,
+            messages: [] as AuditInteraction[],
+            error: err?.message || String(err),
+          };
+        }
+      })
+    );
 
     let md = `# Department of Computing Education - TQM Process Audit Transcripts
 University of Mindanao - Visayan Campus • BSIT Quality Assessment
@@ -616,19 +660,47 @@ Total Sessions Documented: ${adminAllSessions.length}
 ---
 `;
 
-    for (let i = 0; i < adminAllSessions.length; i++) {
-      const sess = adminAllSessions[i];
+    for (let i = 0; i < sessionDataList.length; i++) {
+      const { sess, messages, error } = sessionDataList[i];
       const p = sess.profileSnapshot;
+      const createdDateObj = parseDate(sess.createdAt);
+
       md += `\n## Session ${i + 1}: ${p?.position || 'Staff'} (${p?.roleCategory || 'Faculty'})
 - Session ID: ${sess.sessionId}
 - Department: ${p?.department || 'Department of Computing Education'}
 - Years in Role: ${p?.yearsInRole ?? 'N/A'}
 - Primary Function: ${p?.jobFunction || 'N/A'}
 - Audit Status: ${sess.status}
-- Date: ${new Date(sess.createdAt || Date.now()).toLocaleDateString()}
+- Date: ${createdDateObj.toLocaleDateString()}
+- Start Date and Time: ${createdDateObj.toLocaleString()}
+- Message Count: ${messages.length}
 
-### Synthesized Audit Card
+### Transcript (${messages.length} messages, path /users/${sess.userId}/interactions)
 `;
+
+      if (error) {
+        md += `\nTranscript could not be loaded: ${error}\n`;
+      } else if (messages.length === 0) {
+        md += `\n*No messages recorded for this session.*\n`;
+      } else {
+        md += `\n`;
+        for (const msg of messages) {
+          const isUser = msg.role === 'user';
+          const timeStr = msg.timestamp
+            ? parseDate(msg.timestamp).toLocaleString()
+            : 'N/A';
+          let content = msg.content || '';
+          if (!isUser) {
+            content = content.replace(/^\[PART:[^\]]+\]\s*/i, '');
+            const modelInfo = msg.modelUsed ? ` - ${msg.modelUsed}` : '';
+            md += `**Audit Agent** (${timeStr}${modelInfo})\n${content}\n\n`;
+          } else {
+            md += `**Employee** (${timeStr})\n${content}\n\n`;
+          }
+        }
+      }
+
+      md += `\n### Synthesized Audit Card\n`;
 
       if (sess.auditCard) {
         md += `- **Process Described:** ${sess.auditCard.processDescribed}
